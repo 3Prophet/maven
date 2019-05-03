@@ -1,0 +1,295 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd"
+>
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>ch.scs</groupId>
+    <artifactId>integration</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <packaging>jar</packaging>
+
+    <name>integration</name>
+    <url>http://maven.apache.org</url>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <version.java>11</version.java>
+        <version.junit>5.5.0-M1</version.junit>
+        <version.maven.plugin>3.0.0-M3</version.maven.plugin>
+        <version.jacoco.plugin>0.8.3</version.jacoco.plugin>
+        <maven.compiler.source>${version.java}</maven.compiler.source>
+        <maven.compiler.target>${version.java}</maven.compiler.target>
+        <project.build.directory>target</project.build.directory>
+    </properties>
+
+    <profiles>
+        <!-- The Configuration of the development profile -->
+        <profile>
+            <id>dev</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <properties>
+                <!--
+                    Specifies the build.profile.id property that must be equal than the name of
+                    the directory that contains the profile specific configuration file.
+                    Because the name of the directory that contains the configuration file of the
+                    development profile is dev, we must set the value of the build.profile.id
+                    property to dev.
+                -->
+                <build.profile.id>dev</build.profile.id>
+                <!--
+                    Only unit tests are run when the development profile is active
+                -->
+                <skip.integration.tests>true</skip.integration.tests>
+                <skip.unit.tests>false</skip.unit.tests>
+            </properties>
+        </profile>
+        <!-- The Configuration of the integration-test profile -->
+        <profile>
+            <id>integration-test</id>
+            <properties>
+                <!--
+                    Specifies the build.profile.id property that must be equal than the name of
+                    the directory that contains the profile specific configuration file.
+                    Because the name of the directory that contains the configuration file of the
+                    integration-test profile is integration-test, we must set the value of the
+                    build.profile.id property to integration-test.
+                -->
+                <build.profile.id>integration-test</build.profile.id>
+                <!--
+                    Only integration tests are run when the integration-test profile is active
+                -->
+                <skip.integration.tests>false</skip.integration.tests>
+                <skip.unit.tests>true</skip.unit.tests>
+            </properties>
+        </profile>
+        <profile>
+            <id>all-tests</id>
+            <properties>
+                <build.profile.id>all-tests</build.profile.id>
+                <skip.integration.tests>false</skip.integration.tests>
+                <skip.unit.tests>false</skip.unit.tests>
+            </properties>
+        </profile>
+    </profiles>
+
+    <dependencies>
+        <!-- https://mvnrepository.com/artifact/org.junit.jupiter/junit-jupiter-api -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-api</artifactId>
+            <version>${version.junit}</version>
+            <scope>test</scope>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/org.junit.jupiter/junit-jupiter-engine -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-engine</artifactId>
+            <version>${version.junit}</version>
+            <scope>test</scope>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/org.hamcrest/hamcrest-core -->
+        <dependency>
+            <groupId>org.hamcrest</groupId>
+            <artifactId>hamcrest-core</artifactId>
+            <version>2.1</version>
+            <scope>test</scope>
+        </dependency>
+
+    </dependencies>
+
+    <build>
+        <filters>
+            <!--
+            Ensures that the config.properties file is always loaded from the
+            configuration directory of the active Maven profile.
+            -->
+            <filter>profiles/${build.profile.id}/config.properties</filter>
+        </filters>
+        <resources>
+            <!--
+            Placeholders that are found from the files located in the configured resource
+            directories are replaced with the property values found from the profile
+            specific configuration file.
+            -->
+            <resource>
+                <filtering>true</filtering>
+                <directory>src/main/resources</directory>
+            </resource>
+        </resources>
+        <plugins>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>3.0.0</version>
+                <executions>
+                    <execution>
+                        <id>add-integration-test-sources</id>
+                        <phase>generate-test-sources</phase>
+                        <goals>
+                            <goal>add-test-source</goal>
+                        </goals>
+                        <configuration>
+                            <!-- Configures the source directory of our integration tests -->
+                            <sources>
+                                <source>src/integration-test/java</source>
+                            </sources>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>add-integration-test-resources</id>
+                        <phase>generate-test-resources</phase>
+                        <goals>
+                            <goal>add-test-resource</goal>
+                        </goals>
+                        <configuration>
+                            <!-- Configures the resource directory of our integration tests -->
+                            <resources>
+                                <!--
+                                    Placeholders that are found from the files located in the configured resource
+                                    directories are replaced with the property values found from the profile
+                                    specific configuration file.
+                                -->
+                                <resource>
+                                    <filtering>true</filtering>
+                                    <directory>src/integration-test/resources</directory>
+                                </resource>
+                            </resources>
+                        </configuration>
+
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>${version.maven.plugin}</version>
+                <configuration>
+                    <!-- Sets the VM argument line used when unit tests are run. -->
+                    <argLine>${surefireArgLine}</argLine>
+                    <!-- Skips unit tests if the value of skip.unit.tests property is true -->
+                    <skipTests>${skip.unit.tests}</skipTests>
+                    <!-- Excludes integration tests when unit tests are run. -->
+                    <excludes>
+                        <exclude>**/*IT.java</exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <version>${version.maven.plugin}</version>
+                <executions>
+                    <execution>
+                        <id>integration-tests</id>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <goal>verify</goal>
+                        </goals>
+                        <configuration>
+                            <!-- Sets the VM argument line used when integration tests are run. -->
+                            <argLine>${failsafeArgLine}</argLine>
+                            <!--
+                            Skips integration tests if the value of skip.integration.tests property
+                            is true
+                            -->
+                            <skipTests>${skip.integration.tests}</skipTests>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.1.1</version>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <mainClass>ch.scs.logger.App</mainClass>
+                        </manifest>
+                    </archive>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>${version.jacoco.plugin}</version>
+                <executions>
+                    <!--
+                    Prepares the property pointing to the JaCoCo runtime agent which
+                    is passed as VM argument when Maven the Surefire plugin is executed.
+                    -->
+                    <execution>
+                        <id>pre-unit-test</id>
+                        <phase>initialize</phase>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                        <configuration>
+                            <!-- Sets the path to the file which contains the execution data. -->
+                            <destFile>${project.build.directory}/coverage-reports/jacoco-ut.exec</destFile>
+                            <!--
+                            Sets the name of the property containing the settings
+                            for JaCoCo runtime agent.
+                            -->
+                            <propertyName>surefireArgLine</propertyName>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>post-unit-test</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                        <configuration>
+                            <!-- Sets the path to the file which contains the execution data. -->
+                            <dataFile>${project.build.directory}/coverage-reports/jacoco-ut.exec</dataFile>
+                            <!-- Sets the output directory for the code coverage report. -->
+                            <outputDirectory>${project.reporting.outputDirectory}/jacoco-ut</outputDirectory>
+                        </configuration>
+                    </execution>
+                    <!--
+                    Prepares the property pointing to the JaCoCo runtime agent which
+                    is passed as VM argument when Maven the Failsafe plugin is executed.
+                    -->
+                    <execution>
+                        <id>pre-integration-test</id>
+                        <phase>pre-integration-test</phase>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                        <configuration>
+                            <!-- Sets the path to the file which contains the execution data. -->
+                            <destFile>${project.build.directory}/coverage-reports/jacoco-it.exec</destFile>
+                            <!--
+                                Sets the name of the property containing the settings
+                                for JaCoCo runtime agent.
+                            -->
+                            <propertyName>failsafeArgLine</propertyName>
+                        </configuration>
+                    </execution>
+                    <!--
+                    Ensures that the code coverage report for integration tests after
+                    integration tests have been run.
+                    -->
+                    <execution>
+                        <id>post-integration-test</id>
+                        <phase>post-integration-test</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                        <configuration>
+                            <!-- Sets the path to the file which contains the execution data. -->
+                            <dataFile>${project.build.directory}/coverage-reports/jacoco-it.exec</dataFile>
+                            <!-- Sets the output directory for the code coverage report. -->
+                            <outputDirectory>${project.reporting.outputDirectory}/jacoco-it</outputDirectory>
+                        </configuration>
+                    </execution>
+
+                </executions>
+            </plugin>
+
+        </plugins>
+    </build>
+</project>
